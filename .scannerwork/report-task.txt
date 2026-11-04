@@ -1,0 +1,6 @@
+projectKey=YatraLine
+serverUrl=http://localhost:9000
+serverVersion=26.9.0.129388
+dashboardUrl=http://localhost:9000/dashboard?id=YatraLine
+ceTaskId=5105ea59-a493-4adf-a9ff-2b4d2f95feec
+ceTaskUrl=http://localhost:9000/api/ce/task?id=5105ea59-a493-4adf-a9ff-2b4d2f95feec

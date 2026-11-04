@@ -1,0 +1,11 @@
+# Copy this file to .env and fill in your real values.
+# .env is loaded automatically on startup (see app/main.py) — no manual
+# `export` needed once it's in place.
+
+# From https://dashboard.razorpay.com -> Settings -> API Keys (Test Mode)
+RAZORPAY_KEY_ID=rzp_test_TdzqXXQWXq292L
+RAZORPAY_KEY_SECRET=cLUH5HkNr6JadTd4vnjCjzLe
+
+# Optional — see app/security.py for defaults
+# OTP_PEPPER=change-me-to-something-random
+# OTP_DELIVERY_MODE=dev

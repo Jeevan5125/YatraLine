@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YatraLine — Online Bus Ticket Booking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-950:#08111F;
+    --navy-900:#0D1830;
+    --navy-800:#14233B;
+    --navy-700:#1D2E4A;
+    --navy-600:#2C4062;
+    --amber-500:#F59A0B;
+    --amber-400:#FFB52E;
+    --amber-300:#FFD27A;
+    --paper:#FBF3E3;
+    --teal-400:#34C9A3;
+    --coral-500:#E6553D;
+    --ink-900:#1A1408;
+    --mist-300:#C3CEE2;
+    --mist-500:#8D9CB6;
+    --glass:rgba(13,24,44,.74);
+    --glass-border:rgba(148,170,210,.22);
+    --header-h:96px;
+    --amber-grad:linear-gradient(180deg,#FFC45A 0%,#FFAA1F 55%,#F5980B 100%);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{ scroll-behavior:smooth; }
+  main{ flex:1 0 auto; width:100%; }
+  body{
+    background:var(--navy-950);
+    color:var(--mist-300);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-0.01em; }
+  .mono{ font-family:'Space Mono',monospace; }
+  .ic{ width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  button{ font-family:inherit; }
+  :focus-visible{ outline:2px solid var(--amber-400); outline-offset:2px; }
+
+  /* ================= HEADER ================= */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:60;
+    transition:background .25s ease, box-shadow .25s ease;
+  }
+  header.scrolled{
+    background:rgba(8,17,31,.84);
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    box-shadow:0 1px 0 rgba(148,170,210,.16);
+  }
+  .header-inner{
+    max-width:1444px; margin:0 auto; padding:20px 24px 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .brand .badge{ width:54px; height:48px; flex:none; }
+  .brand .badge svg{ width:100%; height:100%; display:block; }
+  .brand h1{ font-size:31px; font-weight:800; color:#fff; letter-spacing:-.02em; line-height:1; }
+  .brand h1 span{ color:var(--amber-400); }
+  .brand small{ display:block; font-size:11.5px; color:var(--mist-300); margin-top:5px; font-weight:500; letter-spacing:.01em; }
+
+  nav{ display:flex; gap:8px; align-items:center; }
+  nav button{
+    display:flex; align-items:center; gap:8px; position:relative;
+    background:none; border:none; color:#fff;
+    font-weight:600; font-size:15px; padding:10px 14px; border-radius:8px; cursor:pointer;
+  }
+  nav button .ic{ font-size:17px; }
+  nav button:hover{ color:var(--amber-300); }
+  nav button.active{ color:var(--amber-400); background:none; }
+  nav button.active::after{
+    content:""; position:absolute; left:12px; right:12px; bottom:-5px;
+    height:2px; border-radius:2px; background:var(--amber-400);
+  }
+
+  .header-actions{ display:flex; gap:14px; align-items:center; }
+  .hbtn{
+    display:flex; align-items:center; gap:9px; cursor:pointer;
+    font-weight:600; font-size:15.5px; padding:13px 26px; border-radius:12px; line-height:1;
+    transition:transform .08s ease, background .15s ease, border-color .15s ease;
+  }
+  .hbtn:active{ transform:scale(.98); }
+  .hbtn .ic{ font-size:17px; }
+  .hbtn-outline{ background:rgba(8,17,31,.35); color:#fff; border:1.5px solid rgba(255,255,255,.85); }
+  .hbtn-outline:hover{ border-color:var(--amber-400); color:var(--amber-300); }
+  .hbtn-fill{ background:var(--amber-grad); color:var(--ink-900); border:1.5px solid transparent; font-weight:700; }
+  .hbtn-fill:hover{ filter:brightness(1.06); }
+
+  /* ================= LAYOUT ================= */
+  main > section:not(#view-search){
+    max-width:980px; margin:0 auto;
+    padding:calc(var(--header-h) + 34px) 20px 30px;
+  }
+  #view-search{ position:relative; }
+
+  /* ================= HOME: SCENE ================= */
+  .scene{ position:absolute; top:0; left:0; right:0; height:1040px; overflow:hidden; z-index:0; pointer-events:none; }
+  .scene > svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .scene-photo{
+    position:absolute; inset:0;
+    /* Drop your own photo at images/hero-bg.jpg to override the illustrated backdrop */
+    background:url('images/hero-bg.jpg') center top / cover no-repeat;
+  }
+  .scene::after{
+    content:""; position:absolute; inset:0;
+    background:
+      linear-gradient(90deg, rgba(6,13,26,.66) 0%, rgba(6,13,26,.28) 42%, rgba(6,13,26,0) 72%),
+      linear-gradient(180deg, rgba(6,13,26,.5) 0%, rgba(6,13,26,0) 20%, rgba(8,17,31,.15) 48%, var(--navy-950) 100%);
+  }
+
+  .home-wrap{
+    position:relative; z-index:1; max-width:1444px; margin:0 auto;
+    padding:calc(var(--header-h) + 58px) 24px 40px;
+  }
+
+  /* ---- hero grid ---- */
+  .hero-grid{
+    display:grid;
+    grid-template-columns:clamp(300px,26vw,385px) clamp(560px,41.4vw,674px) minmax(0,1fr);
+    grid-template-rows:auto auto;
+  }
+  .hero-head{ grid-column:1 / 3; grid-row:1; }
+  .hero-side{ grid-column:1; grid-row:2; padding-right:20px; }
+  .search-card{ grid-column:2; grid-row:2; margin-top:-30px; }
+
+  .hero-kicker{ color:var(--amber-400); font-size:16px; font-weight:700; letter-spacing:.12em; margin-bottom:14px; }
+  .hero-head h2{
+    font-size:clamp(38px,3.45vw,58px); line-height:1.04; font-weight:800; color:#fff; letter-spacing:-.025em;
+  }
+  .hero-head h2 span{ color:var(--amber-400); display:block; }
+  .hero-sub{ margin-top:22px; font-size:clamp(17px,1.35vw,22px); line-height:1.55; color:#fff; font-weight:400; max-width:360px; }
+
+  .script{ font-family:'Caveat',cursive; font-weight:500; color:#e6ecf7; }
+  .script-left{ margin-top:46px; font-size:clamp(28px,2.3vw,37px); line-height:1.05; transform:rotate(-6deg); transform-origin:left center; }
+  .script-left span{ display:block; padding-left:22px; }
+  .script-left svg, .quote-tr svg{ display:block; width:190px; height:12px; margin:2px 0 0 22px; }
+  .quote-tr{
+    position:absolute; right:40px; top:calc(var(--header-h) + 22px);
+    font-size:clamp(22px,1.65vw,27px); line-height:.92; transform:rotate(-13deg); transform-origin:right top; white-space:nowrap;
+  }
+  .quote-tr span{ display:block; }
+  .quote-tr span:nth-child(2){ padding-left:14px; }
+  .quote-tr span:nth-child(3){ padding-left:30px; }
+  .quote-tr span:nth-child(4){ padding-left:38px; }
+  .quote-tr svg{ width:110px; height:10px; margin:0 0 0 40px; }
+
+  /* ---- illustrated bus ---- */
+  .bus-art{
+    position:absolute; right:24px; top:236px; width:clamp(250px,21.5vw,360px); z-index:1;
+    filter:drop-shadow(0 20px 22px rgba(0,0,0,.55));
+    pointer-events:none;
+  }
+  .bus-art svg{ width:100%; height:auto; display:block; }
+  .hero-badges{ position:absolute; right:24px; top:476px; display:flex; gap:14px; z-index:2; white-space:nowrap; }
+  .hero-badges div{ display:flex; align-items:center; gap:8px; color:#fff; }
+  .hero-badges div + div{ padding-left:14px; border-left:1px solid rgba(255,255,255,.22); }
+  .hero-badges .ic{ font-size:23px; }
+  .hero-badges b{ display:block; font-size:13px; font-weight:600; line-height:1.15; }
+  .hero-badges small{ display:block; font-size:10.5px; color:var(--mist-300); }
+
+  /* ---- search card ---- */
+  .search-card{
+    background:linear-gradient(180deg,rgba(17,31,55,.86),rgba(11,21,39,.9));
+    border:1px solid rgba(140,165,210,.32);
+    border-radius:20px; padding:10px 20px 14px;
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    box-shadow:0 30px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .card-tabs{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,.12); }
+  .tab{
+    display:flex; align-items:center; justify-content:center; gap:10px; height:46px;
+    background:none; border:none; border-radius:12px; color:#fff; font-weight:600; font-size:15px; cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .tab .ic{ font-size:18px; }
+  .tab:hover{ color:var(--amber-300); }
+  .tab.active{ background:var(--amber-grad); color:var(--ink-900); font-weight:700; box-shadow:0 6px 18px rgba(245,154,11,.28); }
+
+  .search-form{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px 18px;
+    position:relative; margin-top:20px;
+  }
+  .search-form .field{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .search-form label{ font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#fff; font-weight:700; }
+  .field-from{ grid-column:1; grid-row:1; }
+  .field-to{ grid-column:2; grid-row:1; }
+  .field-date{ grid-column:3; grid-row:1; }
+  .field-pax{ grid-column:1; grid-row:2; }
+
+  .control{ position:relative; display:flex; align-items:center; }
+  .control .lead{ position:absolute; left:14px; font-size:18px; color:#fff; pointer-events:none; z-index:1; }
+  .control .trail{ position:absolute; right:14px; font-size:16px; color:var(--mist-300); pointer-events:none; z-index:1; }
+  .control .trail.amber{ color:var(--amber-400); font-size:18px; }
+  .control select, .control input{
+    width:100%; height:46px; color-scheme:dark;
+    background:rgba(8,17,31,.62); border:1px solid rgba(148,170,210,.3); border-radius:12px;
+    color:#fff; font-family:'Inter',sans-serif; font-weight:500; font-size:15px;
+    padding:0 42px 0 44px; cursor:pointer;
+  }
+  .control select{ -webkit-appearance:none; appearance:none; }
+  .control select option{ background:#0D1830; color:#fff; }
+  .control select:focus, .control input:focus{ outline:none; border-color:var(--amber-400); box-shadow:0 0 0 3px rgba(255,181,46,.18); }
+  .control input[type=date]{ position:relative; }
+  .control input[type=date]::-webkit-calendar-picker-indicator{
+    position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;
+  }
+
+  .swap-btn{
+    position:absolute; left:calc((100% - 36px)/3 + 9px); top:47px; transform:translate(-50%,-50%);
+    width:26px; height:26px; padding:0; border-radius:50%; z-index:2;
+    background:var(--navy-900); border:1px solid rgba(148,170,210,.45); color:var(--mist-300);
+    display:grid; place-items:center; cursor:pointer; font-size:13px;
+  }
+  .swap-btn:hover{ color:var(--amber-400); border-color:var(--amber-400); }
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:700; font-size:14px;
+    border:none; border-radius:12px; padding:13px 20px; cursor:pointer;
+    transition:transform .08s ease, filter .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn:disabled{ opacity:.6; cursor:not-allowed; }
+  .btn-primary{ background:var(--amber-grad); color:var(--ink-900); }
+  .btn-primary:hover{ filter:brightness(1.07); }
+  .btn-ghost{ background:transparent; color:var(--mist-300); border:1px solid var(--navy-600); }
+  .btn-ghost:hover{ border-color:var(--amber-400); color:var(--amber-400); }
+  .btn-block{ width:100%; margin-top:6px; }
+  .btn-danger{ background:var(--coral-500); color:var(--paper); }
+
+  .btn-search{
+    grid-column:2 / 4; grid-row:2; align-self:end; margin-top:0;
+    height:52px; display:flex; align-items:center; justify-content:center; gap:10px;
+    font-size:17px; box-shadow:0 10px 26px rgba(245,154,11,.3);
+  }
+  .btn-search .ic{ font-size:20px; }
+  .form-note{ grid-column:2 / 4; grid-row:3; text-align:center; font-size:13px; color:var(--mist-300); }
+  .form-note i{ font-style:normal; color:#ff4a5a; }
+
+  /* ---- feature strip ---- */
+  .feature-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:28px; }
+  .feature{
+    display:flex; align-items:center; gap:18px; padding:20px 24px;
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:14px;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  }
+  .feature .fi{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; flex:none; font-size:26px; }
+  .feature b{ display:block; color:#fff; font-size:15.5px; font-weight:600; }
+  .feature span{ display:block; font-size:13px; color:var(--mist-300); margin-top:4px; }
+  .fi-blue{ background:#1B4B98; color:#8EBBFF; }
+  .fi-teal{ background:#0E7F7C; color:#58E6D6; }
+  .fi-sky{ background:#1D5FAA; color:#8FCBFF; }
+  .fi-cyan{ background:#117A92; color:#66E3F2; }
+
+  /* ---- popular routes ---- */
+  .section-head{ display:flex; justify-content:space-between; align-items:center; margin:36px 0 18px; }
+  .section-head h3{ display:flex; align-items:center; gap:16px; font-size:25px; font-weight:700; color:#fff; letter-spacing:-.01em; }
+  .section-head h3::before{ content:""; width:44px; height:5px; border-radius:3px; background:var(--amber-400); }
+  .view-all{
+    display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer;
+    color:var(--amber-400); font-weight:600; font-size:14.5px;
+    text-decoration:underline; text-underline-offset:4px;
+  }
+  .view-all .ic{ font-size:17px; }
+  .routes{ display:grid; grid-template-columns:repeat(5,1fr); gap:16px; }
+  .route-card{
+    display:block; width:100%; text-align:left; padding:0; cursor:pointer; color:inherit; font:inherit;
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; overflow:hidden;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .route-card:hover{ border-color:var(--amber-400); transform:translateY(-2px); }
+  .route-img{ position:relative; height:72px; overflow:hidden; }
+  .route-img svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .route-img::after{
+    content:""; position:absolute; inset:0;
+    /* optional photos: images/routes/<name>.jpg */
+    background:var(--img) center / cover no-repeat;
+  }
+  .route-body{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; }
+  .route-body b{ display:block; color:#fff; font-size:15px; font-weight:600; }
+  .route-body em{ display:block; font-style:normal; color:var(--amber-400); font-weight:600; font-size:14px; margin-top:6px; }
+  .route-go{ width:32px; height:32px; border-radius:50%; border:1.5px solid var(--amber-400); color:var(--amber-400); display:grid; place-items:center; flex:none; font-size:16px; }
+
+  /* ---- why choose ---- */
+  .why{
+    position:relative; overflow:hidden; margin-top:26px; padding:26px 30px 28px;
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:18px;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  }
+  .why-head{ display:flex; align-items:center; gap:18px; }
+  .why-head > .ic{ font-size:34px; color:var(--amber-400); }
+  .why-head h3{ font-size:26px; color:#fff; font-weight:700; letter-spacing:-.01em; }
+  .why-head p{ margin-top:4px; font-size:16px; color:var(--mist-300); }
+  .why .script{ position:absolute; right:40px; top:12px; font-size:24px; line-height:.95; transform:rotate(-9deg); text-align:left; }
+  .why .script span{ display:block; }
+  .why .script span:nth-child(2){ padding-left:16px; }
+  .why .script span:nth-child(3){ padding-left:30px; }
+  .why-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:30px; }
+  .why-item{ display:flex; gap:14px; align-items:flex-start; padding:16px; border-radius:12px; background:rgba(255,255,255,.035); border:1px solid rgba(148,170,210,.14); }
+  .why-item .ic{ font-size:22px; color:var(--amber-400); margin-top:2px; }
+  .why-item b{ display:block; color:#fff; font-size:15px; font-weight:600; }
+  .why-item span{ display:block; margin-top:4px; font-size:13px; line-height:1.5; color:var(--mist-300); }
+  #about{ scroll-margin-top:calc(var(--header-h) - 10px); }
+
+  /* ---- footer ---- */
+  footer{ position:relative; z-index:1; margin-top:48px; background:rgba(5,11,21,.9); border-top:1px solid rgba(148,170,210,.16); }
+  .footer-inner{ max-width:1444px; margin:0 auto; padding:34px 24px; display:flex; flex-wrap:wrap; gap:28px 60px; justify-content:space-between; align-items:flex-start; }
+  .footer-inner h4{ color:#fff; font-size:14px; font-weight:700; margin-bottom:10px; }
+  .footer-inner p, .footer-inner a, .footer-inner button.flink{ font-size:13.5px; color:var(--mist-300); line-height:1.7; }
+  .footer-inner a{ text-decoration:none; }
+  .footer-inner a:hover, .footer-inner button.flink:hover{ color:var(--amber-400); }
+  .footer-inner button.flink{ display:block; background:none; border:none; padding:0; cursor:pointer; text-align:left; }
+  .footer-copy{ max-width:1444px; margin:0 auto; padding:0 24px 26px; font-size:12px; color:var(--mist-500); }
+
+  /* ================= INNER VIEWS ================= */
+  .section-title{ font-size:26px; font-weight:800; color:#fff; letter-spacing:-.015em; margin-bottom:14px; }
+  .bus-card{
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:16px;
+    padding:18px 20px; margin-bottom:12px; display:flex; flex-direction:column; gap:12px;
+    transition:border-color .15s ease;
+  }
+  .bus-card:hover{ border-color:rgba(255,181,46,.55); }
+  .bus-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .operator{ color:#fff; font-weight:700; font-size:15.5px; }
+  .bus-type{ color:var(--mist-500); font-size:12.5px; margin-top:2px; }
+  .fare{ font-weight:800; font-size:24px; color:var(--amber-400); text-align:right; letter-spacing:-.01em; }
+  .fare span{ display:block; font-size:10.5px; color:var(--mist-500); font-weight:600; letter-spacing:0; }
+  .timing-row{ display:flex; align-items:center; gap:14px; }
+  .time-block{ text-align:center; }
+  .time-block .t{ font-family:'Space Mono',monospace; font-size:18px; color:#fff; }
+  .time-block .c{ font-size:11px; color:var(--mist-500); }
+  .duration-line{ flex:1; text-align:center; position:relative; }
+  .duration-line .line{ height:1px; background:var(--navy-600); position:relative; margin:4px 0; }
+  .duration-line .line::before, .duration-line .line::after{
+    content:""; position:absolute; width:6px; height:6px; border-radius:50%; background:var(--amber-400); top:-2.5px;
+  }
+  .duration-line .line::before{ left:0; } .duration-line .line::after{ right:0; }
+  .duration-line small{ color:var(--mist-500); font-size:11px; }
+  .bus-card-bottom{ display:flex; justify-content:space-between; align-items:center; }
+  .seats-left{ font-size:12.5px; color:var(--teal-400); font-weight:700; }
+  .seats-left.low{ color:var(--coral-500); }
+
+  .seat-legend{ display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--mist-500); }
+  .legend-swatch{ width:16px; height:16px; border-radius:4px; }
+  .bus-shell{
+    background:var(--glass); border:1px solid var(--glass-border); border-radius:20px;
+    padding:20px; max-width:290px; margin:0 auto 20px;
+  }
+  .seat-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .seat{
+    aspect-ratio:1; border-radius:7px; border:none; cursor:pointer;
+    font-family:'Space Mono',monospace; font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--navy-700); color:var(--mist-300);
+  }
+  .seat.aisle{ background:transparent; cursor:default; }
+  .seat.available:hover{ background:var(--navy-600); }
+  .seat.booked{ background:var(--navy-600); color:var(--mist-500); cursor:not-allowed; opacity:0.5; }
+  .seat.selected{ background:var(--teal-400); color:var(--ink-900); }
+  .selection-bar{
+    position:sticky; bottom:0; background:rgba(13,24,48,.94); border-top:1px solid var(--glass-border);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    padding:14px 16px; display:flex; justify-content:space-between; align-items:center;
+    border-radius:14px 14px 0 0; margin-top:16px;
+  }
+
+  .card{ background:var(--glass); border:1px solid var(--glass-border); border-radius:16px; padding:20px; margin-bottom:16px; }
+  .passenger-block{ border-bottom:1px solid var(--navy-700); padding-bottom:14px; margin-bottom:14px; }
+  .passenger-block:last-child{ border:none; margin:0; padding:0; }
+  .form-row{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; margin-top:8px; }
+  .form-row input, .form-row select{
+    background:rgba(8,17,31,.7); border:1px solid var(--navy-600); color:#fff;
+    padding:11px 12px; border-radius:10px; font-size:13.5px; font-family:'Inter',sans-serif; color-scheme:dark;
+  }
+  .form-row input:focus, .form-row select:focus{ outline:none; border-color:var(--amber-400); box-shadow:0 0 0 3px rgba(255,181,46,.16); }
+  .pay-options{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .pay-option{
+    border:1px solid var(--navy-600); border-radius:12px; padding:14px; text-align:center;
+    cursor:pointer; font-size:13.5px; font-weight:600; color:var(--mist-300);
+  }
+  .pay-option:hover{ border-color:var(--mist-500); }
+  .pay-option.selected{ border-color:var(--amber-400); color:var(--amber-400); background:rgba(255,181,46,0.08); }
+  .summary-row{ display:flex; justify-content:space-between; font-size:13px; padding:6px 0; color:var(--mist-500); }
+  .summary-row.total{ color:#fff; font-weight:700; font-size:16px; border-top:1px solid var(--navy-700); padding-top:10px; margin-top:6px; }
+
+  /* TICKET */
+  .ticket{ background:var(--paper); color:var(--ink-900); border-radius:16px; max-width:420px; margin:0 auto; position:relative; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+  .ticket-top{ padding:22px; }
+  .ticket-brand{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .ticket-brand b{ font-family:'Inter',sans-serif; font-weight:800; font-size:17px; letter-spacing:-.01em; }
+  .pnr{ font-family:'Space Mono',monospace; font-weight:700; background:var(--ink-900); color:var(--amber-300); padding:4px 10px; border-radius:5px; font-size:12px; }
+  .ticket-route{ display:flex; justify-content:space-between; align-items:center; margin:16px 0; }
+  .ticket-route .city{ font-family:'Inter',sans-serif; font-weight:800; font-size:24px; letter-spacing:-.02em; }
+  .ticket-route .arrow{ color:var(--coral-500); font-size:18px; }
+  .ticket-meta{ display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; margin-top:12px; }
+  .ticket-meta div b{ display:block; font-family:'Space Mono',monospace; font-size:13px; margin-top:2px; }
+  .perforation{ height:22px; position:relative; background:
+    radial-gradient(circle 11px at 0 50%, var(--navy-950) 10px, transparent 11px),
+    radial-gradient(circle 11px at 100% 50%, var(--navy-950) 10px, transparent 11px);
+  }
+  .perforation::after{ content:""; position:absolute; top:50%; left:22px; right:22px; border-top:2px dashed var(--navy-600); }
+  .ticket-bottom{ padding:18px 22px 22px; }
+  .passenger-list{ font-size:12px; margin-top:8px; }
+  .passenger-list .p-row{ display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #d8cba8; }
+
+  /* ADMIN */
+  .metric-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .metric-card{ background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:16px; }
+  .metric-card .val{ font-weight:800; font-size:28px; color:var(--amber-400); letter-spacing:-.02em; }
+  .metric-card .lbl{ font-size:11px; color:var(--mist-500); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+  .metric-card.custom{ border-color:var(--teal-400); }
+  .metric-card.custom .val{ color:var(--teal-400); }
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ text-align:left; padding:8px; border-bottom:1px solid var(--navy-700); color:var(--mist-300); }
+  th{ color:var(--mist-500); text-transform:uppercase; font-size:10px; letter-spacing:0.06em; }
+
+  .empty{ text-align:center; padding:40px 20px; color:var(--mist-500); }
+  .empty .display{ font-size:22px; color:#fff; margin-bottom:6px; }
+  .hidden{ display:none !important; }
+
+  /* OTP */
+  .otp-boxes{ display:flex; gap:10px; justify-content:center; margin:18px 0; }
+  .otp-boxes input{
+    width:46px; height:54px; text-align:center; font-size:20px;
+    background:rgba(8,17,31,.7); border:1px solid var(--navy-600); color:#fff;
+    border-radius:10px; font-family:'Space Mono',monospace;
+  }
+  .otp-boxes input:focus{ outline:none; border-color:var(--amber-400); box-shadow:0 0 0 3px rgba(255,181,46,.18); }
+  .otp-hint{ text-align:center; font-size:12.5px; color:var(--mist-500); margin-bottom:4px; }
+  .otp-dev{ text-align:center; font-size:12px; color:var(--amber-400); font-style:italic; margin-bottom:10px; }
+  .contact-block{ border-top:1px solid var(--glass-border); padding-top:14px; margin-top:14px; }
+  .contact-block .form-row{ grid-template-columns:1fr 1fr 1fr; }
+  .field-error{ color:var(--coral-500); font-size:12px; margin-top:-8px; margin-bottom:10px; display:none; text-align:center; }
+  .field-error.show{ display:block; }
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--teal-400); color:var(--ink-900); padding:12px 20px; border-radius:10px;
+    font-weight:700; font-size:13px; z-index:100; opacity:0; transition:opacity .3s; max-width:90vw; text-align:center;
+  }
+  .toast.show{ opacity:1; }
+  .toast.error{ background:var(--coral-500); color:var(--paper); }
+
+  /* ================= RESPONSIVE ================= */
+  @media(max-width:1280px){
+    .hero-badges{ gap:14px; }
+    .hero-badges div + div{ padding-left:14px; }
+    .hero-badges b{ font-size:12.5px; }
+  }
+  @media(max-width:1180px){
+    .hero-grid{ display:block; }
+    .hero-side{ padding:0; margin-bottom:26px; }
+    .search-card{ margin-top:0; }
+    .hero-sub{ max-width:520px; }
+    .script-left{ display:none; }
+    .quote-tr, .hero-badges{ display:none; }
+    .bus-art{ top:calc(var(--header-h) + 30px); width:300px; }
+    .routes{ grid-template-columns:repeat(3,1fr); }
+    .feature-strip{ grid-template-columns:repeat(2,1fr); }
+    .why-grid{ grid-template-columns:repeat(2,1fr); }
+    .why .script{ display:none; }
+  }
+  @media(max-width:980px){
+    :root{ --header-h:136px; }
+    .header-inner{ flex-wrap:wrap; row-gap:8px; padding-bottom:8px; }
+    nav{ order:3; width:100%; overflow-x:auto; gap:2px; scrollbar-width:none; }
+    nav::-webkit-scrollbar{ display:none; }
+    nav button{ white-space:nowrap; padding:8px 10px; font-size:14px; }
+    nav button.active::after{ bottom:-2px; }
+    header.scrolled, header{ background:rgba(8,17,31,.86); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+    .hbtn{ padding:11px 18px; font-size:14px; }
+  }
+  @media(max-width:900px){
+    .bus-art{ display:none; }
+  }
+  @media(max-width:700px){
+    .routes{ grid-template-columns:repeat(2,1fr); }
+    .metric-grid{ grid-template-columns:1fr; }
+  }
+  @media(max-width:640px){
+    .home-wrap{ padding-left:16px; padding-right:16px; }
+    .search-form{ grid-template-columns:1fr; }
+    .field-from,.field-to,.field-date,.field-pax,.btn-search,.form-note{ grid-column:1; grid-row:auto; }
+    .swap-btn{ left:auto; right:16px; top:78px; }
+    .tab{ font-size:12.5px; gap:6px; padding:0 4px; white-space:nowrap; }
+    .section-head h3{ font-size:21px; gap:10px; }
+    .section-head h3::before{ width:24px; }
+    .view-all{ font-size:13px; white-space:nowrap; }
+    .tab .ic{ display:none; }
+    .search-card{ padding:10px 14px 14px; }
+    .feature-strip{ grid-template-columns:1fr; }
+    .why-grid{ grid-template-columns:1fr; }
+    .form-row, .contact-block .form-row{ grid-template-columns:1fr; }
+  }
+  @media(max-width:520px){
+    .brand small{ display:none; }
+    .brand h1{ font-size:26px; }
+    .brand .badge{ width:44px; height:40px; }
+    .hbtn-outline{ display:none; }
+    .routes{ grid-template-columns:1fr; }
+  }
+  @media(prefers-reduced-motion:reduce){
+    html{ scroll-behavior:auto; }
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ICON SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3M9 13c6.67 0 6.67-10 0-10"/></symbol>
+    <symbol id="i-bus" viewBox="0 0 24 24"><path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></symbol>
+    <symbol id="i-explore" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="3" fill="#0a1424" stroke="none"/></symbol>
+
+    <!-- Gopuram silhouette for the route thumbnails -->
+    <symbol id="gopuram" viewBox="0 -8 80 68">
+      <g stroke="rgba(0,0,0,.28)" stroke-width=".8">
+        <polygon points="0,60 80,60 74,46 6,46"/>
+        <polygon points="8,46 72,46 67,34 13,34"/>
+        <polygon points="15,34 65,34 61,24 19,24"/>
+        <polygon points="21,24 59,24 56,15 24,15"/>
+        <polygon points="27,15 53,15 51,8 29,8"/>
+        <path d="M30 8 Q40 -4 50 8Z"/>
+      </g>
+      <rect x="39" y="-7" width="2" height="6"/>
+      <path d="M34 60v-6a6 6 0 0 1 12 0v6z" fill="rgba(0,0,0,.4)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ HEADER ============ -->
+<header id="siteHeader">
+  <div class="header-inner">
+    <div class="brand" data-view="search" role="link" tabindex="0" aria-label="YatraLine home">
+      <div class="badge">
+        <svg viewBox="0 0 54 48" aria-hidden="true">
+          <rect x="4" y="3" width="46" height="35" rx="10" fill="#FFB52E"/>
+          <rect x="10" y="9" width="34" height="14" rx="4" fill="#0D1830"/>
+          <rect x="25.5" y="9" width="3" height="14" fill="#FFB52E"/>
+          <circle cx="15" cy="30" r="3" fill="#0D1830"/>
+          <circle cx="39" cy="30" r="3" fill="#0D1830"/>
+          <rect x="9" y="38" width="9" height="8" rx="2.5" fill="#FFB52E"/>
+          <rect x="36" y="38" width="9" height="8" rx="2.5" fill="#FFB52E"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Yatra<span>Line</span></h1>
+        <small>Travel Together, Go Further</small>
+      </div>
+    </div>
+
+    <nav>
+      <button data-view="search" class="active"><svg class="ic"><use href="#i-home"/></svg>Home</button>
+      <button data-scroll="searchCard" data-focus="#fromCity"><svg class="ic"><use href="#i-ticket"/></svg>Book Tickets</button>
+      <button data-view="mybookings"><svg class="ic"><use href="#i-cal"/></svg>My Bookings</button>
+      <button data-scroll="about"><svg class="ic"><use href="#i-info"/></svg>About</button>
+      <button data-scroll="contact"><svg class="ic"><use href="#i-phone"/></svg>Contact</button>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="hbtn hbtn-outline" id="loginBtn"><svg class="ic"><use href="#i-user"/></svg>Login</button>
+      <button type="button" class="hbtn hbtn-fill" id="signupBtn"><svg class="ic"><use href="#i-user"/></svg>Sign Up</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- SEARCH VIEW (home) -->
+  <section id="view-search">
+
+    <!-- illustrated backdrop -->
+    <div class="scene" aria-hidden="true">
+      <svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMin slice">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0a1530"/>
+            <stop offset=".13" stop-color="#1a2a4d"/>
+            <stop offset=".22" stop-color="#4a5478"/>
+            <stop offset=".285" stop-color="#d9884f"/>
+            <stop offset=".33" stop-color="#f7b65e"/>
+            <stop offset=".5" stop-color="#3a4560"/>
+          </linearGradient>
+          <radialGradient id="sunGlow" cx="1180" cy="212" r="420" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff3cf" stop-opacity=".98"/>
+            <stop offset=".08" stop-color="#ffd07a" stop-opacity=".85"/>
+            <stop offset=".35" stop-color="#f39a48" stop-opacity=".32"/>
+            <stop offset="1" stop-color="#f08a3a" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6c6f8d"/><stop offset="1" stop-color="#3f4a68"/></linearGradient>
+          <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37425f"/><stop offset="1" stop-color="#1e2a44"/></linearGradient>
+          <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2b45"/><stop offset="1" stop-color="#101a2e"/></linearGradient>
+          <linearGradient id="road" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b3f52"/><stop offset="1" stop-color="#1a2030"/></linearGradient>
+        </defs>
+        <rect width="1600" height="1040" fill="url(#sky)"/>
+        <circle cx="1180" cy="212" r="420" fill="url(#sunGlow)"/>
+        <circle cx="1180" cy="212" r="22" fill="#fff6dc"/>
+        <!-- far range -->
+        <path fill="url(#m1)" d="M0 330 L110 292 L230 322 L370 262 L510 304 L650 236 L770 176 L900 248 L1030 300 L1150 284 L1270 322 L1410 298 L1600 336 L1600 760 L0 760Z"/>
+        <!-- mid range -->
+        <path fill="url(#m2)" d="M0 402 L140 352 L300 392 L470 332 L640 384 L800 322 L980 384 L1150 342 L1320 392 L1480 362 L1600 402 L1600 820 L0 820Z"/>
+        <!-- near range -->
+        <path fill="url(#m3)" d="M0 470 L180 420 L360 462 L560 412 L760 472 L960 432 L1160 486 L1400 444 L1600 474 L1600 900 L0 900Z"/>
+        <!-- road -->
+        <path fill="url(#road)" d="M1000 300 C1050 322 1088 350 1130 384 C1210 440 1320 478 1600 566 L1600 720 C1400 650 1210 566 1100 506 C990 446 930 350 1000 300Z"/>
+        <path d="M1010 306 C1060 328 1098 356 1140 390 C1220 446 1330 484 1600 572" fill="none" stroke="#f4b45a" stroke-opacity=".5" stroke-width="3"/>
+        <path d="M1040 326 C1110 380 1200 460 1600 620" fill="none" stroke="#ffffff" stroke-opacity=".5" stroke-width="3" stroke-dasharray="26 22"/>
+        <!-- guard rail -->
+        <path d="M0 560 C220 552 420 548 620 560" fill="none" stroke="#5a6479" stroke-opacity=".7" stroke-width="10"/>
+        <!-- left forest -->
+        <path fill="#09171c" d="M0 384 L0 780 L640 780 L580 650 C500 566 380 506 262 462 C170 428 84 396 0 384Z"/>
+        <path fill="#09171c" d="M6 394 L12 360 L17 394Z M23 398 L30 357 L37 398Z M45 404 L50 356 L56 404Z M63 409 L70 354 L77 409Z M86 415 L92 379 L97 415Z M105 420 L112 377 L119 420Z M129 427 L134 377 L140 427Z M149 432 L156 375 L163 432Z M174 439 L180 401 L185 439Z M195 445 L202 400 L209 445Z M212 449 L218 397 L223 449Z M234 455 L241 396 L248 455Z M252 460 L258 420 L263 460Z M275 466 L282 419 L289 466Z M294 471 L300 417 L305 471Z M318 478 L325 443 L332 478Z M338 483 L344 441 L349 483Z M363 490 L370 441 L377 490Z M384 496 L390 440 L395 496Z M401 500 L408 463 L415 500Z M423 506 L428 462 L434 506Z M441 511 L448 460 L455 511Z M464 517 L470 459 L475 517Z M483 522 L490 483 L497 522Z M507 529 L512 483 L518 529Z M527 534 L534 481 L541 534Z M552 541 L558 507 L563 541Z"/>
+        <!-- right ridge -->
+        <path fill="#0d1824" d="M1600 340 C1520 366 1450 402 1396 446 L1600 528Z"/>
+      </svg>
+      <div class="scene-photo"></div>
+    </div>
+
+    <div class="home-wrap">
+
+      <div class="quote-tr script" aria-hidden="true">
+        <span>Good</span><span>Journeys</span><span>Create</span><span>Great Stories</span>
+        <svg viewBox="0 0 150 12"><path d="M3 8 Q50 1 146 4" fill="none" stroke="#FFB52E" stroke-width="3.2" stroke-linecap="round"/></svg>
+      </div>
+
+      <!-- illustrated coach -->
+      <div class="bus-art" aria-hidden="true">
+        <svg viewBox="0 0 400 210">
+          <defs>
+            <linearGradient id="busBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#f3f5f8"/><stop offset=".45" stop-color="#c3cad6"/><stop offset="1" stop-color="#7f8898"/>
+            </linearGradient>
+            <linearGradient id="busGlass" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1b2a44"/><stop offset=".5" stop-color="#0b1424"/><stop offset="1" stop-color="#15223a"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="200" cy="190" rx="192" ry="11" fill="rgba(0,0,0,.5)"/>
+          <rect x="8" y="16" width="384" height="150" rx="26" fill="url(#busBody)"/>
+          <rect x="14" y="18" width="372" height="15" rx="7.5" fill="#f8f9fb" opacity=".85"/>
+          <!-- windows -->
+          <rect x="88" y="42" width="286" height="52" rx="9" fill="url(#busGlass)"/>
+          <g stroke="#c9d0db" stroke-width="5">
+            <path d="M136 42v52M184 42v52M232 42v52M280 42v52M328 42v52"/>
+          </g>
+          <!-- windshield -->
+          <path d="M18 60 Q20 42 40 42 H76 a8 8 0 0 1 8 8 V94 H18Z" fill="url(#busGlass)"/>
+          <path d="M26 88 L46 48" stroke="#fff" stroke-opacity=".18" stroke-width="6" stroke-linecap="round"/>
+          <!-- livery -->
+          <rect x="8" y="102" width="384" height="6" fill="#FFB52E"/>
+          <text x="112" y="142" font-family="Inter, sans-serif" font-weight="800" font-size="27" fill="#16223a" letter-spacing="-.5">Yatra<tspan fill="#F59A0B">Line</tspan></text>
+          <!-- lights -->
+          <rect x="8" y="112" width="16" height="11" rx="4" fill="#ffe9a8"/>
+          <rect x="384" y="58" width="8" height="42" rx="3" fill="#e23636"/>
+          <!-- wheels -->
+          <circle cx="92" cy="166" r="34" fill="#080b11"/>
+          <circle cx="306" cy="166" r="34" fill="#080b11"/>
+          <circle cx="92" cy="168" r="27" fill="#12161e"/><circle cx="92" cy="168" r="14" fill="#98a1b0"/><circle cx="92" cy="168" r="5" fill="#2a3038"/>
+          <circle cx="306" cy="168" r="27" fill="#12161e"/><circle cx="306" cy="168" r="14" fill="#98a1b0"/><circle cx="306" cy="168" r="5" fill="#2a3038"/>
+        </svg>
+      </div>
+
+      <div class="hero-badges" aria-hidden="true">
+        <div><svg class="ic"><use href="#i-explore"/></svg><span><b>Explore</b><small>New Places</small></span></div>
+        <div><svg class="ic"><use href="#i-heart"/></svg><span><b>Travel</b><small>With Comfort</small></span></div>
+        <div><svg class="ic"><use href="#i-shield"/></svg><span><b>Safe</b><small>&amp; Reliable</small></span></div>
+      </div>
+
+      <div class="hero-grid">
+        <div class="hero-head">
+          <div class="hero-kicker">EXPLORE • BOOK • TRAVEL</div>
+          <h2>Your Next Journey <span>Starts Here</span></h2>
+        </div>
+
+        <div class="hero-side">
+          <p class="hero-sub">Safe. Comfortable. Affordable. Across Tamil Nadu and Beyond.</p>
+          <div class="script script-left" aria-hidden="true">
+            More Than a Ride
+            <span>It's a Better Tomorrow</span>
+            <svg viewBox="0 0 190 12"><path d="M3 8 Q60 1 186 4" fill="none" stroke="#FFB52E" stroke-width="3.2" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+
+        <div class="search-card" id="searchCard">
+          <div class="card-tabs">
+            <button type="button" class="tab active"><svg class="ic"><use href="#i-bus"/></svg>Bus Tickets</button>
+            <button type="button" class="tab" data-view="mybookings"><svg class="ic"><use href="#i-cal"/></svg>My Bookings</button>
+            <button type="button" class="tab" id="tabCancel"><svg class="ic"><use href="#i-ticket"/></svg>Cancel Ticket</button>
+          </div>
+
+          <form class="search-form" id="searchForm">
+            <div class="field field-from">
+              <label for="fromCity">From</label>
+              <div class="control">
+                <svg class="ic lead"><use href="#i-pin"/></svg>
+                <select id="fromCity" required></select>
+                <svg class="ic trail"><use href="#i-chev"/></svg>
+              </div>
+            </div>
+            <button type="button" class="swap-btn" id="swapBtn" aria-label="Swap cities" title="Swap cities"><svg class="ic"><use href="#i-swap"/></svg></button>
+            <div class="field field-to">
+              <label for="toCity">To</label>
+              <div class="control">
+                <svg class="ic lead"><use href="#i-pin"/></svg>
+                <select id="toCity" required></select>
+                <svg class="ic trail"><use href="#i-chev"/></svg>
+              </div>
+            </div>
+            <div class="field field-date">
+              <label for="travelDate">Journey Date</label>
+              <div class="control">
+                <svg class="ic lead"><use href="#i-cal"/></svg>
+                <input type="date" id="travelDate" required>
+                <svg class="ic trail amber"><use href="#i-cal"/></svg>
+              </div>
+            </div>
+            <div class="field field-pax">
+              <label for="paxCount">Passengers</label>
+              <div class="control">
+                <svg class="ic lead"><use href="#i-user"/></svg>
+                <select id="paxCount">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+                <svg class="ic trail"><use href="#i-chev"/></svg>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-search"><svg class="ic"><use href="#i-search"/></svg>Search Buses</button>
+            <div class="form-note">Best routes. Best prices. Always with you. <i>&#10084;</i></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- value strip -->
+      <div class="feature-strip">
+        <div class="feature"><div class="fi fi-blue"><svg class="ic"><use href="#i-shield"/></svg></div><div><b>Secure Booking</b><span>Your data is safe with us</span></div></div>
+        <div class="feature"><div class="fi fi-teal"><svg class="ic"><use href="#i-rupee"/></svg></div><div><b>Best Prices</b><span>Great deals always</span></div></div>
+        <div class="feature"><div class="fi fi-sky"><svg class="ic"><use href="#i-users"/></svg></div><div><b>Wide Network</b><span>Across Tamil Nadu &amp; India</span></div></div>
+        <div class="feature"><div class="fi fi-cyan"><svg class="ic"><use href="#i-headset"/></svg></div><div><b>24/7 Support</b><span>We're here for you</span></div></div>
+      </div>
+
+      <!-- popular routes -->
+      <div class="section-head">
+        <h3>Popular Routes</h3>
+        <button type="button" class="view-all" id="viewAllRoutes">View All Routes <svg class="ic"><use href="#i-arrow"/></svg></button>
+      </div>
+      <div class="routes">
+
+        <button type="button" class="route-card" data-from="Chennai" data-to="Coimbatore">
+          <div class="route-img" style="--img:url('images/routes/coimbatore.jpg')">
+            <svg viewBox="0 0 280 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs><linearGradient id="rg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f77b4"/><stop offset="1" stop-color="#f0b48a"/></linearGradient></defs>
+              <rect width="280" height="72" fill="url(#rg1)"/>
+              <rect x="26" y="40" width="228" height="32" fill="#8c3a30"/>
+              <rect x="26" y="37" width="228" height="5" fill="#cdb9a0"/>
+              <rect x="122" y="10" width="36" height="62" fill="#9b4236"/>
+              <polygon points="122,10 140,-2 158,10" fill="#6e2a24"/>
+              <circle cx="140" cy="24" r="7" fill="#f4efe2"/><path d="M140 19v5l3 2" stroke="#3a1a17" stroke-width="1.4" fill="none"/>
+              <g fill="#3a1a17" opacity=".55"><rect x="44" y="48" width="9" height="24" rx="4"/><rect x="66" y="48" width="9" height="24" rx="4"/><rect x="88" y="48" width="9" height="24" rx="4"/><rect x="183" y="48" width="9" height="24" rx="4"/><rect x="205" y="48" width="9" height="24" rx="4"/><rect x="227" y="48" width="9" height="24" rx="4"/></g>
+            </svg>
+          </div>
+          <div class="route-body"><div><b>Chennai → Coimbatore</b><em>From ₹450</em></div><span class="route-go"><svg class="ic"><use href="#i-arrow"/></svg></span></div>
+        </button>
+
+        <button type="button" class="route-card" data-from="Chennai" data-to="Madurai">
+          <div class="route-img" style="--img:url('images/routes/madurai.jpg')">
+            <svg viewBox="0 0 280 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs><linearGradient id="rg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c85c8e"/><stop offset="1" stop-color="#f6ac72"/></linearGradient></defs>
+              <rect width="280" height="72" fill="url(#rg2)"/>
+              <use href="#gopuram" x="34" y="24" width="50" height="42" fill="#a97b52"/>
+              <use href="#gopuram" x="196" y="24" width="50" height="42" fill="#a97b52"/>
+              <use href="#gopuram" x="92" y="-2" width="96" height="82" fill="#c4915c"/>
+              <rect y="64" width="280" height="8" fill="#3a2436"/>
+            </svg>
+          </div>
+          <div class="route-body"><div><b>Chennai → Madurai</b><em>From ₹620</em></div><span class="route-go"><svg class="ic"><use href="#i-arrow"/></svg></span></div>
+        </button>
+
+        <button type="button" class="route-card" data-from="Chennai" data-to="Trichy">
+          <div class="route-img" style="--img:url('images/routes/trichy.jpg')">
+            <svg viewBox="0 0 280 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs><linearGradient id="rg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d86a8"/><stop offset="1" stop-color="#bfe0d6"/></linearGradient></defs>
+              <rect width="280" height="72" fill="url(#rg3)"/>
+              <path fill="#6d5c48" d="M0 72V58Q40 52 72 46L92 32Q112 20 138 26L164 32Q192 42 212 48Q250 54 280 60V72Z"/>
+              <path fill="#584a3a" d="M138 26L164 32Q192 42 212 48Q250 54 280 60V72H170Z" opacity=".6"/>
+              <use href="#gopuram" x="118" y="-2" width="44" height="37" fill="#dcc394"/>
+              <rect y="66" width="280" height="6" fill="#2a4a3a"/>
+            </svg>
+          </div>
+          <div class="route-body"><div><b>Chennai → Trichy</b><em>From ₹520</em></div><span class="route-go"><svg class="ic"><use href="#i-arrow"/></svg></span></div>
+        </button>
+
+        <button type="button" class="route-card" data-from="Chennai" data-to="Salem">
+          <div class="route-img" style="--img:url('images/routes/salem.jpg')">
+            <svg viewBox="0 0 280 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs><linearGradient id="rg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a72b8"/><stop offset="1" stop-color="#b9c8e6"/></linearGradient></defs>
+              <rect width="280" height="72" fill="url(#rg4)"/>
+              <path fill="#7a6a58" d="M40 72L70 40Q96 24 130 30Q168 34 196 46L240 72Z"/>
+              <path fill="#5a4d40" d="M0 72L20 52Q44 44 66 56L90 72Z"/>
+              <path fill="#5a4d40" d="M200 72L226 54Q252 46 280 58V72Z"/>
+              <use href="#gopuram" x="112" y="2" width="56" height="48" fill="#cbb28c"/>
+            </svg>
+          </div>
+          <div class="route-body"><div><b>Chennai → Salem</b><em>From ₹480</em></div><span class="route-go"><svg class="ic"><use href="#i-arrow"/></svg></span></div>
+        </button>
+
+        <button type="button" class="route-card" data-from="Chennai" data-to="Bengaluru">
+          <div class="route-img" style="--img:url('images/routes/bengaluru.jpg')">
+            <svg viewBox="0 0 280 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <defs>
+                <linearGradient id="rg5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16274f"/><stop offset="1" stop-color="#d78443"/></linearGradient>
+                <radialGradient id="rg5g" cx="140" cy="40" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".7"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient>
+              </defs>
+              <rect width="280" height="72" fill="url(#rg5)"/>
+              <circle cx="140" cy="40" r="70" fill="url(#rg5g)"/>
+              <use href="#gopuram" x="98" y="-4" width="84" height="72" fill="#f2b437"/>
+              <g fill="#0a1424"><path d="M0 72V56Q14 44 30 56Q44 46 60 58V72Z"/><path d="M220 72V58Q236 44 252 58Q268 48 280 58V72Z"/></g>
+            </svg>
+          </div>
+          <div class="route-body"><div><b>Chennai → Bengaluru</b><em>From ₹780</em></div><span class="route-go"><svg class="ic"><use href="#i-arrow"/></svg></span></div>
+        </button>
+
+      </div>
+
+      <!-- why choose -->
+      <div class="why" id="about">
+        <div class="script" aria-hidden="true"><span>Travel</span><span>Explore</span><span>Repeat</span></div>
+        <div class="why-head">
+          <svg class="ic"><use href="#i-route"/></svg>
+          <div>
+            <h3>Why Choose YatraLine?</h3>
+            <p>We make your travel experience simple, safe and memorable.</p>
+          </div>
+        </div>
+        <div class="why-grid">
+          <div class="why-item"><svg class="ic"><use href="#i-grid"/></svg><div><b>Pick your exact seat</b><span>See the live seat map and choose the seats you like.</span></div></div>
+          <div class="why-item"><svg class="ic"><use href="#i-shield"/></svg><div><b>OTP-verified bookings</b><span>Every booking is confirmed with a one-time code.</span></div></div>
+          <div class="why-item"><svg class="ic"><use href="#i-card"/></svg><div><b>Safe payments</b><span>Pay through Razorpay with UPI, card, net banking or wallet.</span></div></div>
+          <div class="why-item"><svg class="ic"><use href="#i-ticket"/></svg><div><b>Instant e-ticket</b><span>Get your PNR and e-ticket the moment payment succeeds.</span></div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- RESULTS VIEW -->
+  <section id="view-results" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="section-title" id="resultsTitle">Available Buses</div>
+      <button class="btn btn-ghost" data-view="search">← Modify Search</button>
+    </div>
+    <div id="resultsList"></div>
+  </section>
+
+  <!-- SEAT SELECTION -->
+  <section id="view-seats" class="hidden">
+    <div class="section-title" id="seatsTitle">Select Your Seats</div>
+    <div class="seat-legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--navy-700)"></div>Available</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--navy-600);opacity:.5"></div>Booked</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--teal-400)"></div>Selected</div>
+    </div>
+    <div class="bus-shell">
+      <div style="text-align:center;font-size:11px;color:var(--mist-500);margin-bottom:10px;">🚌 FRONT — DRIVER</div>
+      <div class="seat-grid" id="seatGrid"></div>
+    </div>
+    <div class="selection-bar">
+      <div>
+        <div style="color:#fff;font-weight:700;" id="selSummary">0 seats selected</div>
+        <div class="mono" style="font-size:12px;color:var(--amber-400);" id="selFare">₹0</div>
+      </div>
+      <button class="btn btn-primary" id="toPassengerBtn">Continue →</button>
+    </div>
+  </section>
+
+  <!-- PASSENGER DETAILS -->
+  <section id="view-passenger" class="hidden">
+    <div class="section-title">Passenger Details</div>
+    <div class="card" id="passengerForm"></div>
+    <div class="card contact-block">
+      <b style="color:#fff">Contact for verification</b>
+      <div class="form-row" style="margin-top:10px;">
+        <input type="text" id="contactName" placeholder="Full name">
+        <input type="email" id="contactEmail" placeholder="Email">
+        <input type="tel" id="contactPhone" placeholder="Phone">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" id="toPaymentBtn">Verify &amp; Continue →</button>
+  </section>
+
+  <!-- OTP VERIFICATION -->
+  <section id="view-otp" class="hidden">
+    <div class="section-title">Verify It's You</div>
+    <div class="card">
+      <div class="otp-hint">Enter the 6-digit code sent to your phone/email</div>
+      <div class="otp-dev" id="otpDevHint"></div>
+      <div class="otp-boxes">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+        <input maxlength="1" class="otp-digit" inputmode="numeric">
+      </div>
+      <div class="field-error" id="otpError"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" style="flex:1" id="resendOtpBtn">Resend code</button>
+        <button class="btn btn-primary" style="flex:1" id="verifyOtpBtn">Verify</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAYMENT -->
+  <section id="view-payment" class="hidden">
+    <div class="section-title">Payment</div>
+    <div class="card">
+      <div class="pay-options">
+        <div class="pay-option selected" data-method="UPI">📱 UPI</div>
+        <div class="pay-option" data-method="Card">💳 Card</div>
+        <div class="pay-option" data-method="NetBanking">🏦 Net Banking</div>
+        <div class="pay-option" data-method="Wallet">👛 Wallet</div>
+      </div>
+      <div class="summary-row"><span>Base fare</span><span id="payBase">₹0</span></div>
+      <div class="summary-row"><span>Convenience fee</span><span id="payFee">₹0</span></div>
+      <div class="summary-row total"><span>Total payable</span><span id="payTotal">₹0</span></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="payNowBtn">Pay with Razorpay</button>
+  </section>
+
+  <!-- TICKET / CONFIRMATION -->
+  <section id="view-ticket" class="hidden">
+    <div class="section-title">Booking Confirmed 🎉</div>
+    <div class="ticket" id="ticketBox"></div>
+    <div style="display:flex;gap:10px;max-width:420px;margin:16px auto 0;">
+      <button class="btn btn-ghost" style="flex:1" data-view="search">Book Another</button>
+      <button class="btn btn-primary" style="flex:1" data-view="mybookings">View My Bookings</button>
+    </div>
+  </section>
+
+  <!-- MY BOOKINGS -->
+  <section id="view-mybookings" class="hidden">
+    <div class="section-title">My Bookings</div>
+    <div id="myBookingsList"></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="view-admin" class="hidden">
+    <div class="section-title">Admin Dashboard</div>
+    <div class="metric-grid" id="metricGrid"></div>
+    <div class="section-title" style="font-size:18px;">Recent Bookings (All Users)</div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table id="adminBookingsTable">
+        <thead><tr><th>PNR</th><th>Route</th><th>Seats</th><th>Fare</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="section-title" style="font-size:18px;margin-top:20px;">Route Fleet</div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table id="adminBusTable">
+        <thead><tr><th>Bus ID</th><th>Operator</th><th>Route</th><th>Type</th><th>Fare</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="section-title" style="font-size:18px;margin-top:20px;">Audit Log</div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table id="adminAuditTable">
+        <thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer id="contact">
+  <div class="footer-inner">
+    <div>
+      <h4>YatraLine</h4>
+      <p>Travel Together, Go Further.<br>Bus tickets across Tamil Nadu and beyond.</p>
+    </div>
+    <div>
+      <h4>Quick links</h4>
+      <button class="flink" data-view="search">Home</button>
+      <button class="flink" data-view="mybookings">My Bookings</button>
+      <button class="flink" data-view="admin">Admin</button>
+    </div>
+    <div>
+      <h4>Need help?</h4>
+      <p>Keep your PNR handy when you contact support.</p>
+      <!-- TODO: replace with your real support email / phone -->
+      <a href="mailto:support@yatraline.example">support@yatraline.example</a>
+    </div>
+  </div>
+  <div class="footer-copy">© YatraLine. All rights reserved.</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+/* ============ CONFIG ============ */
+const API = ""; // same-origin — this file is served by the FastAPI app itself
+const CONVENIENCE_FEE_PER_SEAT = 30; // display only; the backend computes the authoritative fee
+
+/* ============ STATE ============ */
+let state = {
+  cities: [], search:null, results:[], selectedRoute:null, selectedSeats:[],
+  passengers:[], contact:null, paymentMethod:"UPI",
+  holdToken:null, verificationId:null, userId:null,
+  pnr:null, booking:null, currentBooking:null
+};
+
+/* ============ UTIL ============ */
+function $(sel){ return document.querySelector(sel); }
+function $all(sel){ return document.querySelectorAll(sel); }
+function showView(name){
+  $all("main section").forEach(s=>s.classList.add("hidden"));
+  $("#view-"+name).classList.remove("hidden");
+  $all("nav button").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function toast(msg, duration=2600, isError=false){
+  const t=$("#toast"); t.textContent=msg;
+  t.classList.toggle("error", isError);
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove("show"),duration);
+}
+function fmtTime(iso){
+  return new Date(iso).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+function fmtDuration(depIso, arrIso){
+  const mins = Math.round((new Date(arrIso) - new Date(depIso)) / 60000);
+  const h = Math.floor(mins/60), m = mins%60;
+  return `${h}h ${String(m).padStart(2,"0")}m`;
+}
+
+/* ============ API HELPER ============ */
+async function api(path, opts={}){
+  const res = await fetch(API + path, {
+    headers: {"Content-Type":"application/json"}, ...opts,
+  });
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){
+    throw new Error(data.detail || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+/* ============ INIT ============ */
+async function initCities(){
+  try{
+    state.cities = await api("/api/buses/cities");
+  }catch(e){ state.cities = []; }
+  const from = $("#fromCity"), to = $("#toCity");
+  from.innerHTML = ""; to.innerHTML = "";
+  state.cities.forEach(c=>{
+    from.innerHTML += `<option value="${c}">${c}</option>`;
+    to.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+  if(state.cities.length>1){ from.value = state.cities[0]; to.value = state.cities[1]; }
+  const dateInput = $("#travelDate");
+  const today = new Date();
+  dateInput.min = today.toISOString().split("T")[0];
+  dateInput.value = today.toISOString().split("T")[0];
+}
+
+/* ============ NAV ============ */
+$all("[data-view]").forEach(b=>b.addEventListener("click", ()=>{
+  showView(b.dataset.view);
+  if(b.dataset.view==="mybookings") renderMyBookings();
+  if(b.dataset.view==="admin") renderAdmin();
+}));
+$("#swapBtn").addEventListener("click", ()=>{
+  const f=$("#fromCity"), t=$("#toCity");
+  const tmp=f.value; f.value=t.value; t.value=tmp;
+});
+
+/* ============ SEARCH ============ */
+$("#searchForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const from=$("#fromCity").value, to=$("#toCity").value, date=$("#travelDate").value, pax=+$("#paxCount").value;
+  if(from===to){ toast("Please choose two different cities", 2600, true); return; }
+  state.search = {from,to,date,pax};
+  try{
+    state.results = await api(`/api/buses/search?from_city=${encodeURIComponent(from)}&to_city=${encodeURIComponent(to)}`);
+    renderResults();
+    showView("results");
+  }catch(err){ toast(err.message, 3000, true); }
+});
+
+function renderResults(){
+  $("#resultsTitle").textContent = `${state.search.from} → ${state.search.to} · ${state.search.date}`;
+  const list = $("#resultsList");
+  if(state.results.length===0){
+    list.innerHTML = `<div class="empty"><div class="display">No buses on this route yet</div>Try a different city pair.</div>`;
+    return;
+  }
+  list.innerHTML = state.results.map(r=>{
+    const lowClass = r.seats_available<=8 ? "low":"";
+    const duration = fmtDuration(r.departure, r.arrival);
+    return `
+    <div class="bus-card">
+      <div class="bus-card-top">
+        <div>
+          <div class="operator">${r.operator}</div>
+          <div class="bus-type">${r.bus_type} · ${r.bus_number}</div>
+        </div>
+        <div class="fare">₹${r.fare}<span>per seat</span></div>
+      </div>
+      <div class="timing-row">
+        <div class="time-block"><div class="t">${fmtTime(r.departure)}</div><div class="c">${r.from_city}</div></div>
+        <div class="duration-line"><div class="line"></div><small>${duration}</small></div>
+        <div class="time-block"><div class="t">${fmtTime(r.arrival)}</div><div class="c">${r.to_city}</div></div>
+      </div>
+      <div class="bus-card-bottom">
+        <div class="seats-left ${lowClass}">${r.seats_available} seats left</div>
+        <button class="btn btn-primary" onclick="openSeatMap(${r.route_id})">Select Seats</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ============ SEATS ============ */
+async function openSeatMap(routeId){
+  state.selectedRoute = state.results.find(r=>r.route_id===routeId);
+  state.selectedSeats = [];
+  state.holdToken = null;
+  $("#seatsTitle").textContent = `${state.selectedRoute.operator} · ${state.selectedRoute.from_city} → ${state.selectedRoute.to_city}`;
+  await renderSeatGrid();
+  showView("seats");
+}
+async function renderSeatGrid(){
+  const grid = $("#seatGrid");
+  grid.innerHTML = `<div class="empty">Loading seats…</div>`;
+  let seats;
+  try{
+    seats = await api(`/api/buses/${state.selectedRoute.route_id}/seats`);
+  }catch(e){ grid.innerHTML = `<div class="empty">Couldn't load seats.</div>`; return; }
+
+  grid.innerHTML = "";
+  let col = 0;
+  seats.forEach((s, i)=>{
+    grid.appendChild(makeSeatEl(s));
+    col++;
+    if(col===2){
+      const aisle=document.createElement("div"); aisle.className="seat aisle"; grid.appendChild(aisle);
+    }
+    if(col===4) col=0;
+  });
+  updateSelectionBar();
+}
+function makeSeatEl(seat){
+  const el=document.createElement("button");
+  el.type="button";
+  el.textContent=seat.seat_number;
+  const isBooked = seat.status !== "AVAILABLE";
+  el.className = "seat " + (isBooked ? "booked" : "available");
+  if(!isBooked){
+    el.addEventListener("click", ()=>{
+      const idx = state.selectedSeats.indexOf(seat.seat_number);
+      if(idx>-1){ state.selectedSeats.splice(idx,1); el.classList.remove("selected"); }
+      else{
+        if(state.selectedSeats.length >= state.search.pax){ toast(`You selected ${state.search.pax} passenger(s) — deselect a seat first`); return; }
+        state.selectedSeats.push(seat.seat_number); el.classList.add("selected");
+      }
+      updateSelectionBar();
+    });
+  }
+  return el;
+}
+function updateSelectionBar(){
+  const n = state.selectedSeats.length;
+  const r = state.selectedRoute;
+  $("#selSummary").textContent = `${n} seat${n!==1?"s":""} selected ${n?"("+state.selectedSeats.join(", ")+")":""}`;
+  $("#selFare").textContent = "₹"+(n*r.fare);
+}
+$("#toPassengerBtn").addEventListener("click", async ()=>{
+  if(state.selectedSeats.length===0){ toast("Select at least one seat", 2600, true); return; }
+  try{
+    // Server-authoritative hold: locks these seats for this session for a few minutes.
+    const res = await api("/api/seats/hold", {
+      method:"POST",
+      body: JSON.stringify({ route_id: state.selectedRoute.route_id, seat_numbers: state.selectedSeats }),
+    });
+    state.holdToken = res.hold_token;
+    renderPassengerForm();
+    showView("passenger");
+  }catch(err){
+    toast(err.message, 3200, true);
+    await renderSeatGrid(); // someone else may have taken a seat — refresh
+  }
+});
+
+/* ============ PASSENGER DETAILS ============ */
+function renderPassengerForm(){
+  const container = $("#passengerForm");
+  container.innerHTML = state.selectedSeats.map((seat,i)=>`
+    <div class="passenger-block">
+      <b style="color:var(--paper)">Passenger ${i+1} · Seat ${seat}</b>
+      <div class="form-row">
+        <input type="text" placeholder="Full name" data-idx="${i}" data-field="name" required>
+        <input type="number" placeholder="Age" min="1" max="110" data-idx="${i}" data-field="age" required>
+        <select data-idx="${i}" data-field="gender">
+          <option>Male</option><option>Female</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+  `).join("");
+}
+$("#toPaymentBtn").addEventListener("click", async ()=>{
+  const inputs = $all("#passengerForm [data-field]");
+  const passengers = state.selectedSeats.map(()=>({}));
+  let valid = true;
+  inputs.forEach(inp=>{
+    const idx=+inp.dataset.idx, field=inp.dataset.field;
+    passengers[idx][field] = inp.value;
+    if(!inp.value) valid=false;
+  });
+  const contactName = $("#contactName").value.trim();
+  const contactEmail = $("#contactEmail").value.trim();
+  const contactPhone = $("#contactPhone").value.trim();
+  if(!valid){ toast("Please fill in every passenger's details", 2600, true); return; }
+  if(!contactName || !contactEmail || !contactPhone){ toast("Fill in contact details for OTP delivery", 2600, true); return; }
+
+  state.passengers = passengers.map((p,i)=>({
+    name:p.name, age:parseInt(p.age,10), gender:p.gender, seat_number:state.selectedSeats[i],
+  }));
+  state.contact = {name:contactName, email:contactEmail, phone:contactPhone};
+
+  try{
+    const otpRes = await api("/api/auth/request-otp", {
+      method:"POST",
+      body: JSON.stringify({ name:contactName, email:contactEmail, phone:contactPhone, purpose:"booking" }),
+    });
+    state.verificationId = otpRes.verification_id;
+    $("#otpDevHint").textContent = otpRes.dev_otp ? `Dev mode — your OTP is ${otpRes.dev_otp}` : "";
+    setupOtpBoxes();
+    showView("otp");
+  }catch(err){ toast(err.message, 3000, true); }
+});
+
+/* ============ OTP ============ */
+function setupOtpBoxes(){
+  $("#otpError").classList.remove("show");
+  const boxes = [...$all(".otp-digit")];
+  boxes.forEach(b=>b.value="");
+  boxes.forEach((box,i)=>{
+    box.oninput = ()=>{ if(box.value && i<boxes.length-1) boxes[i+1].focus(); };
+    box.onkeydown = (e)=>{ if(e.key==="Backspace" && !box.value && i>0) boxes[i-1].focus(); };
+  });
+  boxes[0].focus();
+}
+$("#resendOtpBtn").addEventListener("click", async ()=>{
+  try{
+    const otpRes = await api("/api/auth/request-otp", {
+      method:"POST",
+      body: JSON.stringify({ name:state.contact.name, email:state.contact.email, phone:state.contact.phone, purpose:"booking" }),
+    });
+    state.verificationId = otpRes.verification_id;
+    $("#otpDevHint").textContent = otpRes.dev_otp ? `Dev mode — your OTP is ${otpRes.dev_otp}` : "Code resent.";
+    toast("A new code has been sent");
+  }catch(err){ toast(err.message, 3000, true); }
+});
+$("#verifyOtpBtn").addEventListener("click", async ()=>{
+  const otp = [...$all(".otp-digit")].map(b=>b.value).join("");
+  const errEl = $("#otpError");
+  if(otp.length!==6){ errEl.textContent="Enter all 6 digits"; errEl.classList.add("show"); return; }
+
+  try{
+    const verifyRes = await api("/api/auth/verify-otp", {
+      method:"POST",
+      body: JSON.stringify({ verification_id: state.verificationId, otp }),
+    });
+    state.userId = verifyRes.user_id;
+
+    // Booking is created only after OTP verification succeeds — it records the
+    // passengers against the seats we're holding, still in PENDING status.
+    const booking = await api("/api/bookings", {
+      method:"POST",
+      body: JSON.stringify({
+        route_id: state.selectedRoute.route_id,
+        hold_token: state.holdToken,
+        user_id: state.userId,
+        passengers: state.passengers,
+      }),
+    });
+    state.pnr = booking.pnr;
+
+    // Links this verified OTP session to the booking, advancing it to
+    // AWAITING_PAYMENT — only then will /payments/create-order accept it.
+    await api(`/api/bookings/${state.pnr}/confirm-otp?verification_id=${state.verificationId}`, { method:"POST" });
+
+    $("#payBase").textContent = `₹${booking.base_fare}`;
+    $("#payFee").textContent = `₹${booking.convenience_fee}`;
+    $("#payTotal").textContent = `₹${booking.total}`;
+    showView("payment");
+  }catch(err){
+    errEl.textContent = err.message; errEl.classList.add("show");
+  }
+});
+
+/* ============ PAYMENT (Razorpay) ============ */
+$all(".pay-option").forEach(el=>el.addEventListener("click", ()=>{
+  $all(".pay-option").forEach(o=>o.classList.remove("selected"));
+  el.classList.add("selected");
+  state.paymentMethod = el.dataset.method;
+}));
+
+$("#payNowBtn").addEventListener("click", async ()=>{
+  const btn = $("#payNowBtn");
+  btn.disabled = true; btn.textContent = "Opening Razorpay…";
+  try{
+    const order = await api("/api/payments/create-order", {
+      method:"POST", body: JSON.stringify({ pnr: state.pnr }),
+    });
+
+    if(typeof Razorpay === "undefined"){
+      toast("Razorpay checkout.js failed to load — check your connection", 3500, true);
+      btn.disabled = false; btn.textContent = "Pay with Razorpay";
+      return;
+    }
+
+    const rzp = new Razorpay({
+      key: order.key_id,               // set RAZORPAY_KEY_ID on the server to your real test key
+      amount: Math.round(order.amount * 100), // paise
+      currency: order.currency,
+      name: "YatraLine",
+      description: `${state.selectedRoute.from_city} → ${state.selectedRoute.to_city} · ${state.pnr}`,
+      order_id: order.gateway_order_id,
+      prefill: {
+        name: state.contact.name, email: state.contact.email, contact: state.contact.phone,
+      },
+      theme: { color: "#FFB238" },
+      handler: async function(response){
+        // response.razorpay_payment_id / _order_id / _signature come straight from
+        // Razorpay — our backend independently recomputes the HMAC to verify them.
+        try{
+          await api("/api/payments/verify", {
+            method:"POST",
+            body: JSON.stringify({
+              pnr: state.pnr,
+              gateway_order_id: response.razorpay_order_id,
+              gateway_payment_id: response.razorpay_payment_id,
+              gateway_signature: response.razorpay_signature,
+              method: state.paymentMethod,
+            }),
+          });
+          state.currentBooking = await api(`/api/bookings/${state.pnr}`);
+          renderTicket(state.currentBooking);
+          toast(`✅ Booking Confirmed! PNR ${state.pnr}`, 4000);
+          showView("ticket");
+        }catch(err){
+          toast("Payment verification failed: " + err.message, 4000, true);
+        }finally{
+          btn.disabled = false; btn.textContent = "Pay with Razorpay";
+        }
+      },
+      modal: {
+        ondismiss: function(){
+          btn.disabled = false; btn.textContent = "Pay with Razorpay";
+        },
+      },
+    });
+    rzp.on("payment.failed", function(){
+      toast("Payment failed — please try again", 3200, true);
+      btn.disabled = false; btn.textContent = "Pay with Razorpay";
+    });
+    rzp.open();
+  }catch(err){
+    toast(err.message, 3200, true);
+    btn.disabled = false; btn.textContent = "Pay with Razorpay";
+  }
+});
+
+/* ============ TICKET ============ */
+function renderTicket(b){
+  $("#ticketBox").innerHTML = `
+    <div class="ticket-top">
+      <div class="ticket-brand"><b>YatraLine E-Ticket</b><span class="pnr">${b.pnr}</span></div>
+      <div class="ticket-route">
+        <div class="city">${b.from_city}</div>
+        <div class="arrow">✈ ⟶ 🚌</div>
+        <div class="city">${b.to_city}</div>
+      </div>
+      <div class="ticket-meta">
+        <div>Operator<b>${b.operator}</b></div>
+        <div>Bus Type<b>${b.bus_type}</b></div>
+        <div>Departure<b>${fmtTime(b.departure)}</b></div>
+        <div>Arrival<b>${fmtTime(b.arrival)}</b></div>
+        <div>Seats<b>${b.passengers.map(p=>p.seat_number).join(", ")}</b></div>
+        <div>Status<b>${b.status}</b></div>
+      </div>
+    </div>
+    <div class="perforation"></div>
+    <div class="ticket-bottom">
+      <b style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Passengers</b>
+      <div class="passenger-list">
+        ${b.passengers.map(p=>`<div class="p-row"><span>${p.name} (${p.age}, ${p.gender})</span><span>Seat ${p.seat_number}</span></div>`).join("")}
+      </div>
+      <div class="summary-row total" style="border-color:#d8cba8;"><span>Total Paid</span><span>₹${b.total}</span></div>
+      <div style="font-size:11px;color:#7a6f52;margin-top:6px;">Paid via ${b.payment_method||"—"} · Booked ${new Date(b.created_at).toLocaleString()}</div>
+    </div>
+  `;
+}
+
+/* ============ MY BOOKINGS ============ */
+async function renderMyBookings(){
+  const list = $("#myBookingsList");
+  if(!state.userId){
+    list.innerHTML = `<div class="empty"><div class="display">No bookings yet</div>Book a ticket first — your OTP-verified contact becomes your booking identity.</div>`;
+    return;
+  }
+  list.innerHTML = `<div class="empty">Loading your bookings…</div>`;
+  let bookings = [];
+  try{ bookings = await api(`/api/bookings/my/${state.userId}`); }catch(e){}
+  if(bookings.length===0){
+    list.innerHTML = `<div class="empty"><div class="display">No bookings yet</div>Search for a route and book your first ticket.</div>`;
+    return;
+  }
+  list.innerHTML = bookings.map(b=>`
+    <div class="bus-card">
+      <div class="bus-card-top">
+        <div>
+          <div class="operator">${b.from_city} → ${b.to_city}</div>
+          <div class="bus-type">${b.operator} · Seats ${b.passengers.map(p=>p.seat_number).join(", ")}</div>
+        </div>
+        <div class="fare">₹${b.total}<span>${b.status}</span></div>
+      </div>
+      <div class="bus-card-bottom">
+        <span class="mono" style="font-size:11px;color:var(--mist-500)">PNR ${b.pnr}</span>
+        <button class="btn btn-ghost" onclick='viewTicketAgain("${b.pnr}")'>View Ticket</button>
+      </div>
+    </div>
+  `).join("");
+}
+async function viewTicketAgain(pnr){
+  try{
+    const b = await api(`/api/bookings/${pnr}`);
+    renderTicket(b);
+    showView("ticket");
+  }catch(err){ toast(err.message, 3000, true); }
+}
+
+/* ============ ADMIN / METRICS ============ */
+async function renderAdmin(){
+  let dash={}, bookings=[], fleet=[], logs=[];
+  try{
+    [dash, bookings, fleet, logs] = await Promise.all([
+      api("/api/admin/dashboard"),
+      api("/api/admin/bookings?limit=15"),
+      api("/api/admin/fleet"),
+      api("/api/admin/logs?limit=25"),
+    ]);
+  }catch(e){ toast("Couldn't load admin data", 3000, true); }
+
+  $("#metricGrid").innerHTML = `
+    <div class="metric-card custom"><div class="val">${dash.success_rate_pct ?? 0}%</div><div class="lbl">★ Seat Booking Success Rate (own metric)</div></div>
+    <div class="metric-card custom"><div class="val">${dash.avg_completion_seconds ?? 0}s</div><div class="lbl">★ Avg. Booking Completion Time (own metric)</div></div>
+    <div class="metric-card"><div class="val">${dash.total_routes ?? 0}</div><div class="lbl">Active Bus Routes</div></div>
+    <div class="metric-card"><div class="val">${dash.total_bookings ?? 0}</div><div class="lbl">Total Bookings (all users)</div></div>
+    <div class="metric-card"><div class="val">₹${dash.total_revenue ?? 0}</div><div class="lbl">Total Revenue Collected</div></div>
+    <div class="metric-card"><div class="val">${dash.fleet_occupancy_pct ?? 0}%</div><div class="lbl">Fleet Seat Occupancy</div></div>
+  `;
+
+  const bTbody = $("#adminBookingsTable tbody");
+  bTbody.innerHTML = bookings.length ? bookings.map(b=>`
+    <tr><td class="mono">${b.pnr}</td><td>${b.route}</td><td>${b.seats.join(", ")}</td><td>₹${b.total}</td><td>${b.status}</td></tr>
+  `).join("") : `<tr><td colspan="5" style="text-align:center;padding:20px;">No bookings recorded yet</td></tr>`;
+
+  const busTbody = $("#adminBusTable tbody");
+  busTbody.innerHTML = fleet.map(f=>`
+    <tr><td class="mono">${f.bus_number}</td><td>${f.operator}</td><td>${f.route}</td><td>${f.bus_type}</td><td>₹${f.fare}</td></tr>
+  `).join("");
+
+  const auditTbody = $("#adminAuditTable tbody");
+  auditTbody.innerHTML = logs.length ? logs.map(l=>`
+    <tr><td class="mono" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleString()}</td><td>${l.action}</td>
+    <td>${l.entity_id||""}</td><td>${l.details||""}</td></tr>
+  `).join("") : `<tr><td colspan="4" style="text-align:center;padding:20px;">No activity logged yet</td></tr>`;
+}
+
+/* ============ START ============ */
+initCities();
+showView("search");
+</script>
+<script>
+/* ============ UI-ONLY HELPERS ============
+   Purely presentational wiring for the new design. Nothing here touches the
+   booking state, API calls, OTP, or payment logic above. */
+(function(){
+  const header = document.getElementById("siteHeader");
+  const onScroll = ()=> header.classList.toggle("scrolled", window.scrollY > 24);
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+
+  function goHomeThen(fn){
+    const home = document.getElementById("view-search");
+    if(home.classList.contains("hidden")){ showView("search"); setTimeout(fn, 90); }
+    else fn();
+  }
+  function scrollToEl(id, focusSel){
+    const el = document.getElementById(id); if(!el) return;
+    el.scrollIntoView({behavior:"smooth", block: id==="searchCard" ? "center" : "start"});
+    if(focusSel) setTimeout(()=>{ const f=document.querySelector(focusSel); if(f) f.focus({preventScroll:true}); }, 550);
+  }
+
+  // Nav items that scroll within the home page (Book Tickets / About / Contact)
+  document.querySelectorAll("[data-scroll]").forEach(el=>{
+    el.addEventListener("click", ()=> goHomeThen(()=> scrollToEl(el.dataset.scroll, el.dataset.focus)));
+  });
+
+  // Logo is keyboard-accessible
+  const brand = document.querySelector(".brand");
+  brand.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); brand.click(); } });
+
+  // "View All Routes" -> jump to the search form
+  document.getElementById("viewAllRoutes").addEventListener("click", ()=> scrollToEl("searchCard", "#fromCity"));
+
+  // Popular route cards: pre-fill the same search form and run the normal search
+  const ALIASES = {
+    trichy:["trichy","tiruchirappalli","tiruchchirappalli","tiruchi"],
+    bengaluru:["bengaluru","bangalore"]
+  };
+  function findCity(select, name){
+    const key = name.toLowerCase(), names = ALIASES[key] || [key];
+    return [...select.options].find(o=> names.includes(o.value.toLowerCase()));
+  }
+  document.querySelectorAll(".route-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      const f = document.getElementById("fromCity"), t = document.getElementById("toCity");
+      const fo = findCity(f, card.dataset.from), to = findCity(t, card.dataset.to);
+      if(!fo || !to){
+        toast(`${card.dataset.from} → ${card.dataset.to} isn't available right now`, 2800, true);
+        scrollToEl("searchCard");
+        return;
+      }
+      f.value = fo.value; t.value = to.value;
+      document.getElementById("searchForm").requestSubmit();
+    });
+  });
+
+  // Features the backend doesn't expose yet: give clear feedback instead of a dead click
+  document.getElementById("tabCancel").addEventListener("click", ()=>
+    toast("Online cancellation isn't available yet — contact support with your PNR.", 3600));
+  const noAuth = ()=> toast("No account needed — you verify with an OTP when you book.", 3400);
+  document.getElementById("loginBtn").addEventListener("click", noAuth);
+  document.getElementById("signupBtn").addEventListener("click", noAuth);
+})();
+</script>
+
+</body>
+</html>
