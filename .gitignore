@@ -1,0 +1,27 @@
+# Sensitive information
+evoting.db
+*.db
+keys/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Build files
+build/
+target/
+*.class
+
+# IDE files
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+
+.coverage
+.env-Copy.example
