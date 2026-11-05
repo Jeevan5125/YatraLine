@@ -1,5 +1,7 @@
-# Sensitive information
-evoting.db
+# Sensitive files
+.env
+.env.*
+!.env.example
 *.db
 keys/
 *.pem
@@ -7,21 +9,25 @@ keys/
 *.p12
 *.pfx
 
-# Build files
-build/
-target/
-*.class
+# SonarQube
+.scannerwork/
 
-# IDE files
+# Python testing
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# IDE
 .vscode/
 .idea/
 
-# Environment files
-.env
-.env.*
+# Build
+build/
+target/
+*.class
+__pycache__/
+*.py[cod]
 
 # Logs
 *.log
-
-.coverage
-.env-Copy.example
